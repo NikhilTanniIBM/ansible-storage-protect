@@ -1,0 +1,57 @@
+# playbook.yml
+---
+- name: Install SP Server
+  hosts: all
+  gather_facts: false
+  become: false
+
+  vars:
+    changed: "false"
+    exclude_patterns:
+    - ".git/"
+    - "*.tmp"
+    - "*.log"
+    - "__pycache__/"
+    - ".DS_Store"
+
+  tasks:
+    - name: Ensure directory exists for sp_baserver
+      win_file:
+        path: C:\Temp\baserver
+        state: directory
+
+    - name: Copy automation framework scripts - sp_baserver.py
+      win_copy:
+        src: /mnt/c/Users/NikhilTanni/Downloads/Nikk-dev/IBM/ansible-storage-protect/plugins/modules/sp_baserver.py
+        dest: C:\Temp\baserver\sp_baserver.py
+        when: changed == "true"
+    
+    - name: Ensure directory exists for sp_baserver_utils
+      win_file:
+        path: C:\Temp\baserver\module_utils
+        state: directory
+
+    - name: Copy automation framework scripts - sp_baserver_utils.py
+      win_copy:
+        src: /mnt/c/Users/NikhilTanni/Downloads/Nikk-dev/IBM/ansible-storage-protect/plugins/module_utils/sp_server_utils.py
+        dest: C:\Temp\baserver\module_utils\sp_server_utils.py
+        when: changed == "true"
+
+    - name: Copy automation framework scripts - sp_server_constants.py
+      win_copy:
+        src: /mnt/c/Users/NikhilTanni/Downloads/Nikk-dev/IBM/ansible-storage-protect/plugins/module_utils/sp_server_constants.py
+        dest: C:\Temp\baserver\module_utils\sp_server_constants.py
+        when: changed == "true"
+
+
+    - name: Run the orchestration module
+      win_command: python C:\temp\baserver\sp_baserver.py --mode=uninstall --serverpassword=IbmIbm@2025*1357 --log-level=DEBUG
+      args:
+        chdir: "C:/Temp/baserver"
+      register: output
+
+    - debug: msg="{{ output.stdout }}"
+
+    - debug: msg="{{ output.stderr }}"
+        
+    

@@ -6,3 +6,4 @@ __pycache__
 .idea
 .python-version
 .DS_Store
+**/logs
