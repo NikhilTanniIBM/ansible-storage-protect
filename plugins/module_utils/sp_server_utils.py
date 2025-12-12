@@ -794,6 +794,158 @@ def artifacts_find_best_old(
     return best
 
 
+def append_line_to_file(path: str, line: str) -> bool:
+    """
+    Safely append a line to a file if it does not already exist.
+    """
+    try:
+        # Read and check if line already present
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                content = f.read()
+            if line in content:
+                return True
+
+        # Append line
+        with open(path, "a") as f:
+            f.write(line + "\n")
+
+        return True
+    except Exception as e:
+        print(f"append_line_to_file failed: {e}")
+        return False
+
+
+def ensure_dir(path: str, owner: str = None, group: str = None, mode: str = None, context=None) -> bool:
+    """
+    Wrapper around fs_ensure_dir that also applies owner/group/mode.
+    Mirrors Ansible 'file: state=directory'.
+    """
+    ok = fs_ensure_dir(path, context=context)
+    if not ok:
+        return False
+
+    try:
+        if owner or group:
+            shutil.chown(path, user=owner, group=group)
+
+        if mode:
+            os.chmod(path, int(mode, 8))
+
+        _debug(context, f"Directory ensured with permissions: {path}")
+        return True
+
+    except Exception as e:
+        _error(context, f"Failed to set permissions on {path}: {e}")
+        return False
+
+def list_files(path: str) -> list[str]:
+    try:
+        return [os.path.join(path, f) for f in os.listdir(path)]
+    except Exception:
+        return []
+
+def remove_file(path: str) -> bool:
+    try:
+        if os.path.isfile(path):
+            os.remove(path)
+        return True
+    except Exception:
+        return False
+    
+def copy_file(src: str, dest: str, owner=None, group=None, mode=None) -> bool:
+    try:
+        shutil.copy2(src, dest)
+        if owner or group:
+            shutil.chown(dest, user=owner, group=group)
+        if mode:
+            os.chmod(dest, int(mode, 8))
+        return True
+    except Exception as e:
+        return False
+
+def update_lines_in_file(path: str, lines: list[str]) -> bool:
+    try:
+        existing = ""
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                existing = f.read()
+
+        with open(path, "a") as f:
+            for ln in lines:
+                if ln not in existing:
+                    f.write(ln + "\n")
+
+        return True
+    except Exception:
+        return False
+
+def touch_file(path: str, owner=None, group=None) -> bool:
+    try:
+        Path(path).touch(exist_ok=True)
+        if owner or group:
+            shutil.chown(path, user=owner, group=group)
+        return True
+    except Exception:
+        return False
+
+def chown(context, path: str, owner: str = None, group: str = None) -> bool:
+    """
+    Change owner/group of a file or directory.
+    Mirrors Ansible's 'owner' and 'group' behavior.
+    """
+    try:
+        shutil.chown(path, user=owner, group=group)
+        _debug(context, f"chown applied: {path} -> {owner}:{group}")
+        return True
+    except Exception as e:
+        _error(context, f"Failed chown on {path}: {e}")
+        return False
+
+def chmod(context, path: str, mode: str) -> bool:
+    """
+    Update file permissions; mode string like '0644'.
+    """
+    try:
+        os.chmod(path, int(mode, 8))
+        _debug(context, f"chmod applied: {path} -> {mode}")
+        return True
+    except Exception as e:
+        _error(context, f"Failed chmod on {path}: {e}")
+        return False
+
+def file_ensure_line(path: str, line: str, context=None) -> bool:
+    """
+    Ensures that a specific line exists in a file.
+    Equivalent to Ansible's lineinfile (basic replacement).
+    """
+    try:
+        # Create file if missing
+        if not os.path.exists(path):
+            with open(path, "w") as f:
+                f.write(line + "\n")
+            _debug(context, f"Created file and added line: {path}")
+            return True
+
+        # Read contents
+        with open(path, "r") as f:
+            lines = f.read().splitlines()
+
+        # Do nothing if already present
+        if line in lines:
+            _debug(context, f"Line already present in {path}")
+            return True
+
+        # Append the line
+        with open(path, "a") as f:
+            f.write(line + "\n")
+
+        _debug(context, f"Line appended to {path}")
+        return True
+
+    except Exception as e:
+        _error(context, f"Failed to ensure line in {path}: {e}")
+        return False
 
 # -----------------------------
 # BA Server micro-utilities (tiny building blocks)

@@ -538,7 +538,7 @@ class BA_SERVER_SETUP:
             if not p.is_file():
                 continue
             m = pat.search(p.name)
-            if m:
+            if m is not None and (m.lastindex or 0) >= 1:
                 candidates.append((p, m.group(1)))
         if len(candidates) < 2:
             return None
@@ -579,7 +579,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             log.debug("Password extracted and used in context payload")
             del _pwd
 
-
     baserversetup = BA_SERVER_SETUP(context=context)
     status = baserversetup.run(mode=args.mode)
     if (not status):
@@ -587,12 +586,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         sys.exit(-1)
     else:
         sys.exit(0)
-
-
-
-
-    
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
